@@ -168,9 +168,9 @@ class DigitalOceanState(MachineState):
         self.public_ipv4 = droplet.ip_address
         self.log_end("{}".format(droplet.ip_address))
 
-        # Not sure when I'd have more than one interface from the DO
-        # API but networks is an array nevertheless.
-        self.default_gateway = droplet.networks['v4'][0]['gateway']
+        for n in droplet.networks['v4']:
+            if self.public_ipv4 == n["ip_address"]:
+                self.default_gateway = n["gateway"]
         self.netmask = droplet.networks['v4'][0]['netmask']
 
         first_ipv6 = {}
