@@ -1094,8 +1094,7 @@ class AzureState(MachineState, ResourceState):
                     self.warn("snapshot {0} for disk {1} is missing; skipping".format(s_id, d_id))
                     continue
 
-                self.log("restoring BLOB '{0}' from snapshot"
-                         .format(media_link, s_id))
+                self.log("restoring BLOB from snapshot")
                 self.bs().copy_blob(blob["container"], blob["name"],
                                    "{0}?snapshot={1}"
                                    .format(media_link, s_id) )
