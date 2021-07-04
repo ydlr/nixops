@@ -143,7 +143,7 @@ class DigitalOceanState(MachineState):
             region=defn.region,
             ipv6=defn.enable_ipv6,
             ssh_keys=[ssh_key.public_key],
-            image='ubuntu-16-04-x64', # only for lustration
+            image='ubuntu-18-04-x64', # only for lustration
             size_slug=defn.size,
         )
 
