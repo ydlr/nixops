@@ -4,6 +4,8 @@
 
 set -e -o pipefail
 
+PROVIDER=digitalocean
+
 makeConf() {
   # Skip everything if main config already present
   [[ -e /etc/nixos/configuration.nix ]] && return 0
