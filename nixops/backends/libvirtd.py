@@ -8,11 +8,18 @@ import shutil
 import string
 import subprocess
 import time
-import libvirt
 
 from nixops.backends import MachineDefinition, MachineState
 import nixops.known_hosts
 import nixops.util
+
+try:
+    import libvirt
+except:
+    class libvirt(object):
+        def __getattribute__(self, name):
+            raise ValueError("The libvirt backend has been disabled because of security issues.") 
+
 
 # to prevent libvirt errors from appearing on screen, see
 # https://www.redhat.com/archives/libvirt-users/2017-August/msg00011.html
