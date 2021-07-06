@@ -92,8 +92,6 @@ EOF
     nameservers = [ ${nameservers[@]} ];
     defaultGateway = "${gateway}";
     defaultGateway6 = "${gateway6}";
-    dhcpcd.enable = false;
-    usePredictableInterfaceNames = false;
     interfaces = {
       ens3 = {
         ipv4.addresses = [$(for a in "${eth0_ip4s[@]}"; do echo -n "
@@ -126,37 +124,7 @@ removeSwap() {
   rm -vf /tmp/nixos-infect.*.swp
 }
 
-isEFI() {
-  [ -d /sys/firmware/efi ]
-}
-
-findESP() {
-  esp=""
-  for d in /boot/EFI /boot/efi /boot; do
-    [[ ! -d "$d" ]] && continue
-    [[ "$d" == "$(df "$d" --output=target | sed 1d)" ]] \
-      && esp="$(df "$d" --output=source | sed 1d)" \
-      && break
-  done
-  [[ -z "$esp" ]] && { echo "ERROR: No ESP mount point found"; return 1; }
-  for uuid in /dev/disk/by-uuid/*; do
-    [[ $(readlink -f "$uuid") == "$esp" ]] && echo $uuid && return 0
-  done
-}
-
 prepareEnv() {
-  # $esp and $grubdev are used in makeConf()
-  if isEFI; then
-    esp="$(findESP)"
-  else
-    for grubdev in /dev/vda /dev/sda /dev/nvme0n1 ; do [[ -e $grubdev ]] && break; done
-  fi
-
-  # Retrieve root fs block device
-  #                   (get root mount)  (get partition or logical volume)
-  rootfsdev=$(mount | grep "on / type" | awk '{print $1;}')
-  rootfstype=$(df $rootfsdev --output=fstype | sed 1d)
-
   # DigitalOcean doesn't seem to set USER while running user data
   export USER="root"
   export HOME="/root"
@@ -165,34 +133,6 @@ prepareEnv() {
   #which sudo || { sudo() { eval "$@"; }; export -f sudo; }
   # shellcheck disable=SC2174
   mkdir -p -m 0755 /nix
-}
-
-fakeCurlUsingWget() {
-  # Use adapted wget if curl is missing
-  which wget && { \
-    curl() {
-      eval "wget $(
-        (local isStdout=1
-        for arg in "$@"; do
-          case "$arg" in
-            "-o")
-              echo "-O";
-              isStdout=0
-              ;;
-            "-O")
-              isStdout=0
-              ;;
-            "-L")
-              ;;
-            *)
-              echo "$arg"
-              ;;
-          esac
-        done;
-        [[ $isStdout -eq 1 ]] && echo "-O-"
-        )| tr '\n' ' '
-      )"
-    }; export -f curl; }
 }
 
 req() {
@@ -211,8 +151,7 @@ checkEnv() {
   which xzcat || (which yum && yum install -y xz-utils) \
               || (which apt-get && apt-get update && apt-get install -y xz-utils) \
               || true
-  which curl  || fakeCurlUsingWget \
-              || (which apt-get && apt-get update && apt-get install -y curl) \
+  which curl  || (which apt-get && apt-get update && apt-get install -y curl) \
               || true
 
   req curl || req wget || { echo "ERROR: Missing both curl and wget";  return 1; }
@@ -268,13 +207,7 @@ infect() {
   echo root/.nix-defexpr/channels >> /etc/NIXOS_LUSTRATE
 
   rm -rf /boot.bak
-  isEFI && umount "$esp"
   mv -v /boot /boot.bak
-  if isEFI; then
-    mkdir /boot
-    mount "$esp" /boot
-    find /boot -depth ! -path /boot -exec rm -rf {} +
-  fi
   /nix/var/nix/profiles/system/bin/switch-to-configuration boot
 }
 
@@ -286,7 +219,3 @@ makeSwap # smallest (512MB) droplet needs extra memory!
 makeConf
 infect
 removeSwap
-
-if [[ -z "$NO_REBOOT" ]]; then
-  reboot
-fi
