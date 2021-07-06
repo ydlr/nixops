@@ -38,30 +38,13 @@ makeConf() {
 }
 EOF
 
-  if isEFI; then
-    bootcfg=$(cat << EOF
-  boot.loader.grub = {
-    efiSupport = true;
-    efiInstallAsRemovable = true;
-    device = "nodev";
-  };
-  fileSystems."/boot" = { device = "$esp"; fsType = "vfat"; };
-EOF
-)
-  else
-    bootcfg=$(cat << EOF
-  boot.loader.grub.device = "$grubdev";
-EOF
-)
-  fi
-
   # If you rerun this later, be sure to prune the filesSystems attr
   cat > /etc/nixos/hardware-configuration.nix << EOF
 { modulesPath, ... }:
 {
   imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
-$bootcfg
-  fileSystems."/" = { device = "$rootfsdev"; fsType = "$rootfstype"; };
+  boot.loader.grub.device = "/dev/vda";
+  fileSystems."/" = { device = "/dev/vda1"; fsType = "ext4"; };
 }
 EOF
 
